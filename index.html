@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Aim Trainer - HZ SYNCED</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #050505;
+            font-family: 'Segoe UI', sans-serif;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* UI */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* CROSSHAIR */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ch-hor,
+        .ch-ver {
+            position: absolute;
+        }
+
+        .ch-dot {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            font-size: 28px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .hud-val {
+            color: #0ff;
+        }
+
+        #tracking-container {
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 10px;
+            background: #333;
+            border: 2px solid #555;
+            display: none;
+        }
+
+        #tracking-bar {
+            width: 0%;
+            height: 100%;
+            background: #0f0;
+        }
+
+        /* MENÜ */
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 5, 0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 20;
+            pointer-events: auto;
+        }
+
+        h1 {
+            color: #ff4444;
+            font-style: italic;
+            font-size: 48px;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        .main-menu-btn {
+            width: 250px;
+            padding: 15px;
+            margin: 10px;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            border-radius: 5px;
+        }
+
+        .main-menu-btn:hover {
+            background: #333;
+            border-color: #ff4444;
+        }
+
+        #start-btn {
+            background: #d32f2f;
+            border: none;
+            margin-top: 30px;
+        }
+
+        #start-btn:hover {
+            background: #f44336;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            width: 300px;
+            margin: 10px 0;
+            align-items: center;
+        }
+
+        label {
+            color: #ccc;
+            font-weight: bold;
+        }
+
+        select,
+        input[type="number"] {
+            background: #111;
+            color: white;
+            border: 1px solid #444;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        /* CROSS MENU */
+        #crosshair-menu {
+            display: none;
+            flex-direction: row;
+            gap: 50px;
+        }
+
+        .cross-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 300px;
+        }
+
+        .cross-preview-box {
+            width: 300px;
+            height: 300px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #preview-crosshair {
+            position: relative;
+            width: 0;
+            height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ui-layer">
+        <div id="crosshair">
+            <div class="ch-hor"></div>
+            <div class="ch-ver"></div>
+            <div class="ch-dot"></div>
+        </div>
+        <div id="hud">
+            <div>MOD: <span id="mode-disp" class="hud-val">Gridshot</span></div>
+            <div>SKOR: <span id="score" class="hud-val">0</span></div>
+            <div>İSABET: <span id="acc" class="hud-val">--</span></div>
+        </div>
+        <div id="tracking-container">
+            <div id="tracking-bar"></div>
+        </div>
+    </div>
+
+    <div id="main-menu" class="menu-overlay">
+        <h1>AIM TRAINER</h1>
+        <div class="setting-row">
+            <label>Oyun:</label>
+            <select id="game-sel">
+                <option value="cs2">CS2 / Source</option>
+                <option value="valorant">Valorant</option>
+                <option value="overwatch">Overwatch</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label>Sens:</label>
+            <input type="number" id="sens-val" value="1.5" step="0.01">
+        </div>
+        <div class="setting-row">
+            <label>Zorluk:</label>
+            <select id="diff-sel">
+                <option value="easy">Kolay (4.0)</option>
+                <option value="medium">Orta (2.5)</option>
+                <option value="hard">Zor (1.3)</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label>Mod:</label>
+            <select id="mode-sel">
+                <option value="grid">Gridshot</option>
+                <option value="tracking">Tracking</option>
+                <option value="reflex">Reflex</option>
+            </select>
+        </div>
+        <button class="main-menu-btn" id="open-cross-btn">CROSSHAIR DÜZENLE</button>
+        <button class="main-menu-btn" id="start-btn">BAŞLA</button>
+    </div>
+
+    <div id="crosshair-menu" class="menu-overlay">
+        <div class="cross-controls">
+            <h2 style="color:#fff; margin:0;">CROSSHAIR</h2>
+            <div class="slider-group">
+                <span>Hazır Ayarlar</span>
+                <select id="cross-preset">
+                    <option value="custom">Özel</option>
+                    <option value="default">CS Default</option>
+                    <option value="dot">Nokta</option>
+                    <option value="small">Küçük Artı</option>
+                </select>
+            </div>
+            <div class="slider-group"><span>Renk <input type="color" id="cross-col" value="#00ff00"
+                        style="border:none;"></span></div>
+            <div class="slider-group"><span>Boyut</span><input type="range" id="cross-size" min="0" max="50" value="10">
+            </div>
+            <div class="slider-group"><span>Kalınlık</span><input type="range" id="cross-thick" min="1" max="10"
+                    value="2"></div>
+            <div class="slider-group"><span>Boşluk</span><input type="range" id="cross-gap" min="0" max="30" value="3">
+            </div>
+            <div class="setting-row" style="width:100%"><label>Merkez Nokta:</label><input type="checkbox"
+                    id="cross-dot-check"></div>
+            <button class="main-menu-btn" id="save-cross-btn" style="width:100%; margin-top:20px;">KAYDET</button>
+        </div>
+        <div class="cross-preview-box">
+            <div id="preview-crosshair">
+                <div class="ch-hor"></div>
+                <div class="ch-ver"></div>
+                <div class="ch-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        let camera, scene, renderer;
+        let isLocked = false;
+        let isMouseDown = false;
+
+        // FPS Eşitlemesi için Saat
+        const clock = new THREE.Clock();
+
+        const targetGroup = new THREE.Group();
+        const raycaster = new THREE.Raycaster();
+        const center = new THREE.Vector2(0, 0);
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+
+        let currentMode = "grid";
+        let score = 0;
+        let shots = 0, hits = 0;
+
+        let boundWidth = 0;
+        let boundHeight = 0;
+        let boundaryCenterY = 0;
+        let boundaryMesh = null;
+
+        // HTML Elements
+        const mainMenu = document.getElementById('main-menu');
+        const crossMenu = document.getElementById('crosshair-menu');
+        const startBtn = document.getElementById('start-btn');
+        const openCrossBtn = document.getElementById('open-cross-btn');
+        const saveCrossBtn = document.getElementById('save-cross-btn');
+
+        const crossPreset = document.getElementById('cross-preset');
+        const crossCol = document.getElementById('cross-col');
+        const crossSize = document.getElementById('cross-size');
+        const crossThick = document.getElementById('cross-thick');
+        const crossGap = document.getElementById('cross-gap');
+        const crossDotCheck = document.getElementById('cross-dot-check');
+
+        const gameSel = document.getElementById('game-sel');
+        const sensVal = document.getElementById('sens-val');
+        const modeSel = document.getElementById('mode-sel');
+        const diffSel = document.getElementById('diff-sel');
+
+        const CS_M_YAW = 0.022;
+        const DEG_TO_RAD = Math.PI / 180;
+
+        const presets = {
+            'default': { size: 12, thick: 2, gap: 5, dot: false, color: '#00ff00' },
+            'dot': { size: 0, thick: 0, gap: 0, dot: true, color: '#00ffff' },
+            'small': { size: 6, thick: 2, gap: 2, dot: false, color: '#ff0000' }
+        };
+
+        const difficulties = {
+            'easy': 4,
+            'medium': 2.5,
+            'hard': 1.3
+        };
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshBasicMaterial({ color: 0x161616 }));
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            camera = new THREE.PerspectiveCamera(73.74, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.y = 15;
+            scene.add(targetGroup);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            openCrossBtn.addEventListener('click', () => { mainMenu.style.display = 'none'; crossMenu.style.display = 'flex'; });
+            saveCrossBtn.addEventListener('click', () => { crossMenu.style.display = 'none'; mainMenu.style.display = 'flex'; });
+
+            const requestLock = async () => {
+                const canvas = renderer.domElement;
+                try { await canvas.requestPointerLock({ unadjustedMovement: true }); }
+                catch (e) { canvas.requestPointerLock(); }
+            };
+            startBtn.addEventListener('click', requestLock);
+
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    isLocked = true;
+                    mainMenu.style.display = 'none';
+                    crossMenu.style.display = 'none';
+                    resetGame();
+                    clock.start(); // Oyun başlayınca saati sıfırla
+                } else {
+                    isLocked = false;
+                    mainMenu.style.display = 'flex';
+                    startBtn.innerText = "DEVAM ET";
+                    clock.stop();
+                }
+            });
+
+            document.addEventListener('mousemove', (event) => {
+                if (!isLocked) return;
+                let userSens = parseFloat(sensVal.value);
+                if (gameSel.value === 'valorant') userSens *= 3.181818;
+                else if (gameSel.value === 'overwatch') userSens /= 3.333333;
+
+                const degreesX = event.movementX * userSens * CS_M_YAW;
+                const degreesY = event.movementY * userSens * CS_M_YAW;
+
+                euler.y -= degreesX * DEG_TO_RAD;
+                euler.x -= degreesY * DEG_TO_RAD;
+                euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+                camera.quaternion.setFromEuler(euler);
+            });
+
+            document.addEventListener('mousedown', (e) => {
+                if (isLocked && e.button === 0) {
+                    e.preventDefault(); isMouseDown = true;
+                    if (currentMode !== 'tracking') shoot();
+                }
+            });
+            document.addEventListener('mouseup', () => isMouseDown = false);
+
+            function updateAllCross() { updateCrossVisuals('crosshair'); updateCrossVisuals('preview-crosshair'); }
+            function updateCrossVisuals(id) {
+                const el = document.getElementById(id);
+                const col = crossCol.value;
+                const size = parseInt(crossSize.value);
+                const thick = parseInt(crossThick.value);
+                const gap = parseInt(crossGap.value);
+
+                const hor = el.querySelector('.ch-hor');
+                hor.style.height = thick + "px"; hor.style.width = (size * 2 + gap) + "px";
+                hor.style.background = `linear-gradient(to right, ${col} ${size}px, transparent ${size}px, transparent ${size + gap}px, ${col} ${size + gap}px)`;
+
+                const ver = el.querySelector('.ch-ver');
+                ver.style.width = thick + "px"; ver.style.height = (size * 2 + gap) + "px";
+                ver.style.background = `linear-gradient(to bottom, ${col} ${size}px, transparent ${size}px, transparent ${size + gap}px, ${col} ${size + gap}px)`;
+
+                const dot = el.querySelector('.ch-dot');
+                dot.style.width = (thick + 2) + "px"; dot.style.height = (thick + 2) + "px"; dot.style.background = col;
+                dot.style.display = crossDotCheck.checked ? 'block' : 'none';
+            }
+
+            [crossCol, crossSize, crossThick, crossGap, crossDotCheck].forEach(el => el.addEventListener('input', () => { crossPreset.value = 'custom'; updateAllCross(); }));
+            crossPreset.addEventListener('change', () => {
+                const p = presets[crossPreset.value];
+                if (p) { crossSize.value = p.size; crossThick.value = p.thick; crossGap.value = p.gap; crossCol.value = p.color; crossDotCheck.checked = p.dot; updateAllCross(); }
+            });
+
+            modeSel.addEventListener('change', () => currentMode = modeSel.value);
+            updateAllCross();
+            updateBoundaries();
+        }
+
+        function updateBoundaries() {
+            if (boundaryMesh) scene.remove(boundaryMesh);
+
+            const dist = 60;
+            const vFOV = THREE.MathUtils.degToRad(camera.fov);
+            const totalVisibleHeight = 2 * Math.tan(vFOV / 2) * dist;
+            const totalVisibleWidth = totalVisibleHeight * camera.aspect;
+
+            const safeW = 0.75;
+            const safeH = 0.85;
+
+            boundWidth = totalVisibleWidth * safeW;
+            let visibleTop = 15 + (totalVisibleHeight / 2) * safeH;
+            let visibleBottom = 15 - (totalVisibleHeight / 2) * safeH;
+
+            const minFloorY = 8;
+            if (visibleBottom < minFloorY) visibleBottom = minFloorY;
+
+            boundHeight = visibleTop - visibleBottom;
+            boundaryCenterY = visibleBottom + (boundHeight / 2);
+
+            const geometry = new THREE.EdgesGeometry(new THREE.PlaneGeometry(boundWidth, boundHeight));
+            const material = new THREE.LineBasicMaterial({ color: 0x880000, linewidth: 2 });
+            boundaryMesh = new THREE.LineSegments(geometry, material);
+            boundaryMesh.position.set(0, boundaryCenterY, -60);
+            scene.add(boundaryMesh);
+        }
+
+        function resetGame() {
+            while (targetGroup.children.length > 0) targetGroup.remove(targetGroup.children[0]);
+            score = 0; shots = 0; hits = 0;
+            updateHUD();
+            document.getElementById('mode-disp').innerText = modeSel.options[modeSel.selectedIndex].text;
+            document.getElementById('tracking-container').style.display = currentMode === 'tracking' ? 'block' : 'none';
+            if (currentMode === 'grid') for (let i = 0; i < 4; i++) spawnTarget(true);
+            else if (currentMode === 'reflex') spawnTarget(false);
+            else spawnTarget(true);
+        }
+
+        function spawnTarget(move) {
+            const diff = diffSel.value;
+            const radius = difficulties[diff];
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 16), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+            setPos(mesh);
+            mesh.userData.velocity = move ? new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0).normalize() : new THREE.Vector3();
+            targetGroup.add(mesh);
+        }
+
+        function setPos(obj) {
+            const diff = diffSel.value;
+            const radius = difficulties[diff];
+            const padding = radius;
+
+            const maxW = (boundWidth / 2) - padding;
+            const maxH = (boundHeight / 2) - padding;
+
+            const x = (Math.random() - 0.5) * 2 * maxW;
+            const yOffset = (Math.random() - 0.5) * 2 * maxH;
+
+            obj.position.set(x, boundaryCenterY + yOffset, -60);
+        }
+
+        function shoot() {
+            shots++;
+            raycaster.setFromCamera(center, camera);
+            const intersects = raycaster.intersectObjects(targetGroup.children);
+            if (intersects.length > 0) {
+                hits++; score += 100;
+                const t = intersects[0].object;
+                t.material.color.setHex(0xff0000);
+                setTimeout(() => { setPos(t); t.material.color.setHex(0x00ffff); }, 50);
+            }
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('score').innerText = Math.floor(score);
+            if (currentMode !== 'tracking' && shots > 0) document.getElementById('acc').innerText = ((hits / shots) * 100).toFixed(1) + "%";
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // --- FPS EŞİTLEMESİ İÇİN DELTA TIME ---
+            // 60Hz'de ~0.016, 300Hz'de ~0.003 gelir.
+            // Hareket ve Puanı bununla çarparsak her PC'de aynı sonuç çıkar.
+            // Güvenlik için cap koyuyoruz (Max 0.1s), tarayıcı donarsa top ışınlanmasın.
+            const delta = Math.min(clock.getDelta(), 0.1);
+
+            if (isLocked) {
+                if (currentMode !== 'reflex') {
+                    // Hız: Saniyede 35 Birim (Hangi Hz olursa olsun aynıdır)
+                    let spd = currentMode === 'tracking' ? 35 : 0;
+
+                    const diff = diffSel.value;
+                    const radius = difficulties[diff];
+                    const padding = radius;
+
+                    const maxW = (boundWidth / 2) - padding;
+                    const maxH = (boundHeight / 2) - padding;
+
+                    targetGroup.children.forEach(t => {
+                        // Hareket = Hız * Geçen Süre
+                        t.position.addScaledVector(t.userData.velocity, spd * delta);
+
+                        if (t.position.x > maxW || t.position.x < -maxW) t.userData.velocity.x *= -1;
+
+                        const topLimit = boundaryCenterY + maxH;
+                        const bottomLimit = boundaryCenterY - maxH;
+                        if (t.position.y > topLimit || t.position.y < bottomLimit) t.userData.velocity.y *= -1;
+                    });
+                }
+                if (currentMode === 'tracking') {
+                    raycaster.setFromCamera(center, camera);
+                    const intersects = raycaster.intersectObjects(targetGroup.children);
+                    const bar = document.getElementById('tracking-bar');
+                    if (intersects.length > 0 && isMouseDown) {
+                        // Puan: Saniyede 1000 Puan
+                        // 60 FPS'te kare başına ~16 puan, 300 FPS'te kare başına ~3 puan. Toplamı aynı.
+                        score += 1000 * delta;
+                        bar.style.width = "100%"; intersects[0].object.material.color.setHex(0x00ff00);
+                    } else {
+                        bar.style.width = "0%"; if (targetGroup.children[0]) targetGroup.children[0].material.color.setHex(0x00ffff);
+                    }
+                    updateHUD(); // Tracking'de her karede HUD güncelle
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            updateBoundaries();
+        });
+    </script>
+</body>
+
+</html>
